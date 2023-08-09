@@ -19,8 +19,6 @@ defmodule UAInspector.Downloader do
   alias UAInspector.Downloader.ShortCodeMapConverter
   alias UAInspector.ShortCodeMap
 
-  require Logger
-
   @client_hints [
     ClientHints.Apps,
     ClientHints.Browsers
@@ -114,7 +112,7 @@ defmodule UAInspector.Downloader do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to download file: #{reason}")
+        :logger.error("Failed to download file: #{reason}")
         :ok
     end
   end
