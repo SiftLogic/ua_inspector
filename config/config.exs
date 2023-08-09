@@ -10,3 +10,5 @@ if Mix.env() == :test do
     database_path: Path.expand("../test/fixtures/database", __DIR__),
     startup_silent: true
 end
+
+config :logger, handle_otp_reports: false
