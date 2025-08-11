@@ -1,5 +1,103 @@
 # Changelog
 
+## v3.11.0-dev
+
+- Enhancements
+    - Added support to use "form factors" client hint header for improved detection
+    - Default upstream database version is now `6.4.6`
+    - Improved mobile app detection
+    - Upstream improvements for OS platform detection have been integrated
+    - Upstream improvements for Blink engine detection have been integrated
+    - Upstream improvements for browser version detection have been integrated
+    - Upstream improvements for library client detection have been integrated
+    - Upstream improvements for Chromium version detection have been integrated
+    - Upstream improvements for Windows version detection have been integrated
+    - Upstream improvements for Linux client detection have been integrated
+    - Upstream improvements for "Chrome OS" detection have been integrated
+    - Upstream improvements for "Fire OS" detection have been integrated
+    - Upstream improvements for "KaiOS" feature phone detection have been integrated
+    - Upstream improvements for "LeafOS" detection have been integrated
+    - Upstream improvements for "Meta Horizon" detection have been integrated
+    - Upstream improvements for "Puffin" browser detection have been integrated
+    - Upstream improvements for "TV-Browser Internet" detection have been integrated
+    - Upstream improvements for "Wolvic" browser detection have been integrated
+    - Upstream improvements for Android TV device detection have been integrated
+    - Upstream improvements for TV device detection have been integrated
+
+- Bug fixes
+    - Fixed compilation for OTP 28+ ([#40](https://github.com/elixir-inspector/ua_inspector/pull/40))
+    - Version parsing changed from "SemVer style" to "PHP style" for exact upstream compatibility
+
+## v3.10.0 (2024-06-11)
+
+- Enhancements
+    - Default upstream database version is now `6.3.2`
+    - Upstream improvements for "360 Secure" browser detection have been integrated
+    - Upstream improvements for "Arachne" browser engine detection have been integrated
+    - Upstream improvements for "Clecko" browser engine detection have been integrated
+    - Upstream improvements for "Edge WebView" detection have been integrated
+    - Upstream improvements for "LibWeb" browser engine detection have been integrated
+    - Upstream improvements for "Lineage OS" detection have been integrated
+    - Upstream improvements for "PICO OS" detection have been integrated
+    - Upstream improvements for "QJY TV" browser detection have been integrated
+    - Upstream improvements for "TV Bro" browser detection have been integrated
+    - Upstream improvements for "SPARC64" platform detection have been integrated
+    - Upstream improvements for Android mobile/tablet device detection have been integrated
+    - Upstream improvements for OS platform detection have been integrated
+    - Upstream improvements for wearable device detection have been integrated
+
+- Bug fixes
+    - Fix parsing if the fourth part of the user agent engine version (split by `.`) starts with `0[0-9]` ([#35](https://github.com/elixir-inspector/ua_inspector/issues/35))
+
+## v3.9.0 (2024-02-20)
+
+- Enhancements
+    - Default upstream database version is now `6.3.0`
+    - Upstream improvements for "Apple" brand detection have been integrated
+    - Upstream improvements for "Chrome Android" smartphone detection have been integrated
+    - Upstream improvements for "DuckDuckGo Privacy" browser detection have been integrated
+    - Upstream improvements for "Iridium" browser detection have been integrated
+    - Upstream improvements for "Vewd" browser detection have been integrated
+    - Upstream improvements for TV device detection have been integrated
+
+## v3.8.0 (2024-01-13)
+
+- Enhancements
+    - Default upstream database version is now `6.2.1`
+    - Match upstream fake user agent device handling
+    - Upstream improvements for Android application detection have been integrated
+    - Upstream improvements for desktop device detection have been integrated
+    - Upstream improvements for "Every Browser" detection have been integrated
+    - Upstream improvements for "Fire OS" detection have been integrated
+    - Upstream improvements for TV device detection have been integrated
+
+## v3.7.0 (2023-11-18)
+
+- Enhancements
+    - Default upstream database version is now `6.2.0`
+    - Upstream improvements for Blink engine version detection have been integrated
+    - Upstream improvements for Android TV device detection have been integrated
+
+## v3.6.0 (2023-10-09)
+
+- Enhancements
+    - Default upstream database version is now `6.1.6`
+    - Upstream improvements for TV device detection have been integrated
+    - Upstream improvements for wearable device detection have been integrated
+
+## v3.5.0 (2023-08-22)
+
+- Enhancements
+    - Default upstream database version is now `6.1.5`
+    - Special handling to detect the correct browser engine (and version) for a combination of a "Blink" style user agent and application client hint header has been integrated
+    - Upstream improvements for TV device detection have been integrated
+
+## v3.4.0 (2023-08-06)
+
+- Enhancements
+    - Default upstream database version is now `6.1.4`
+    - Upstream improvements to detect device brand, if only model is found in client hints, have been integrated
+
 ## v3.3.1 (2023-06-06)
 
 - Enhancements

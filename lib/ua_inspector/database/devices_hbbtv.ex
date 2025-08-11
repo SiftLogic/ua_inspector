@@ -7,7 +7,6 @@ defmodule UAInspector.Database.DevicesHbbTV do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -24,11 +23,11 @@ defmodule UAInspector.Database.DevicesHbbTV do
   defp parse_models(%{"device" => device, "model" => model, "regex" => regex}) do
     [
       {
-        Util.build_regex(regex),
+        Util.Regex.build_regex(regex),
         {
           nil,
           device,
-          YAML.maybe_to_string(model)
+          Util.YAML.maybe_to_string(model)
         }
       }
     ]
@@ -39,11 +38,11 @@ defmodule UAInspector.Database.DevicesHbbTV do
       model = Enum.into(model, %{})
 
       {
-        Util.build_regex(model["regex"]),
+        Util.Regex.build_regex(model["regex"]),
         {
-          YAML.maybe_to_string(model["brand"]),
-          YAML.maybe_to_string(model["device"]),
-          YAML.maybe_to_string(model["model"])
+          Util.YAML.maybe_to_string(model["brand"]),
+          Util.YAML.maybe_to_string(model["device"]),
+          Util.YAML.maybe_to_string(model["model"])
         }
       }
     end)
@@ -55,9 +54,9 @@ defmodule UAInspector.Database.DevicesHbbTV do
       models = parse_models(data)
 
       {
-        Util.build_regex(data["regex"]),
+        Util.Regex.build_regex(data["regex"]),
         {
-          YAML.maybe_to_string(brand),
+          Util.YAML.maybe_to_string(brand),
           models,
           data["device"],
           type
@@ -68,7 +67,7 @@ defmodule UAInspector.Database.DevicesHbbTV do
 
   defp parse_yaml_entries({:error, error}, database, _) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -83,7 +82,7 @@ defmodule UAInspector.Database.DevicesHbbTV do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database, type)
 
       [contents | acc]

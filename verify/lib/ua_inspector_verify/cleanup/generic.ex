@@ -57,6 +57,12 @@ defmodule UAInspectorVerify.Cleanup.Generic do
     %{testcase | bot: %{bot | producer: %{name: name, url: url}}}
   end
 
+  defp cleanup_bot_producers(%{bot: %{producer: %{name: name}} = bot} = testcase) do
+    name = if name === :null, do: "", else: name
+
+    %{testcase | bot: %{bot | producer: %{name: name, url: :unknown}}}
+  end
+
   defp cleanup_bot_producers(testcase), do: testcase
 
   defp cleanup_client_engine(%{client: client} = testcase) when is_map(client) do
@@ -87,6 +93,10 @@ defmodule UAInspectorVerify.Cleanup.Generic do
 
   defp cleanup_os_entry(%{os: []} = testcase) do
     %{testcase | os: :unknown}
+  end
+
+  defp cleanup_os_entry(%{os: %{version: version} = os} = testcase) when is_integer(version) do
+    %{testcase | os: %{os | version: Integer.to_string(version)}}
   end
 
   defp cleanup_os_entry(testcase), do: testcase

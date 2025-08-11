@@ -7,7 +7,6 @@ defmodule UAInspector.Database.Clients do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -38,12 +37,12 @@ defmodule UAInspector.Database.Clients do
       data = Enum.into(data, %{})
 
       {
-        Util.build_regex(data["regex"]),
+        Util.Regex.build_regex(data["regex"]),
         {
           prepare_engine_data(type, data["engine"]),
-          YAML.maybe_to_string(data["name"]),
+          Util.YAML.maybe_to_string(data["name"]),
           type,
-          YAML.maybe_to_string(data["version"])
+          Util.YAML.maybe_to_string(data["version"])
         }
       }
     end)
@@ -51,7 +50,7 @@ defmodule UAInspector.Database.Clients do
 
   defp parse_yaml_entries({:error, error}, database, _) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -62,15 +61,15 @@ defmodule UAInspector.Database.Clients do
     non_default =
       non_default
       |> Enum.map(fn {version, name} ->
-        {version |> to_string() |> Util.to_semver(), {name, Util.build_engine_regex(name)}}
+        {to_string(version), {name, Util.Regex.build_engine_regex(name)}}
       end)
       |> Enum.reverse()
 
-    [{"default", {default, Util.build_engine_regex(default)}}, {"versions", non_default}]
+    [{"default", {default, Util.Regex.build_engine_regex(default)}}, {"versions", non_default}]
   end
 
   defp prepare_engine_data(_, [{"default", default}]) do
-    [{"default", {default, Util.build_engine_regex(default)}}]
+    [{"default", {default, Util.Regex.build_engine_regex(default)}}]
   end
 
   defp prepare_engine_data(_, engine_data), do: engine_data
@@ -83,7 +82,7 @@ defmodule UAInspector.Database.Clients do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database, type)
 
       [contents | acc]

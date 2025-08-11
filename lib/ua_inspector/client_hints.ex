@@ -7,6 +7,7 @@ defmodule UAInspector.ClientHints do
           application: String.t() | :unknown,
           architecture: String.t() | :unknown,
           bitness: String.t() | :unknown,
+          form_factors: [String.t()],
           full_version: String.t() | :unknown,
           full_version_list: [{String.t(), String.t()}],
           mobile: boolean,
@@ -18,14 +19,13 @@ defmodule UAInspector.ClientHints do
   defstruct application: :unknown,
             architecture: :unknown,
             bitness: :unknown,
+            form_factors: [],
             full_version: :unknown,
             full_version_list: [],
             mobile: false,
             model: :unknown,
             platform: :unknown,
             platform_version: :unknown
-
-  @regex_version ~r/^"([^"]+)"; ?v="([^"]+)"(?:, )?/
 
   @doc """
   Parse headers into a new client hint struct.
@@ -51,6 +51,9 @@ defmodule UAInspector.ClientHints do
 
       {"sec-ch-ua-bitness", bitness}, hints ->
         %{hints | bitness: cleanup(bitness)}
+
+      {"sec-ch-ua-form-factors", form_factors_list}, hints ->
+        %{hints | form_factors: parse_form_factors_list(form_factors_list)}
 
       {"sec-ch-ua-full-version", full_version}, hints ->
         %{hints | full_version: cleanup(full_version)}
@@ -93,11 +96,24 @@ defmodule UAInspector.ClientHints do
     |> String.trim()
   end
 
+  defp parse_form_factors_list(form_factors_list) do
+    form_factors_list
+    |> String.split(",")
+    |> Enum.map(fn raw ->
+      raw
+      |> String.trim()
+      |> String.trim(~s("))
+      |> String.downcase()
+    end)
+  end
+
   defp parse_version_list(version_list) do
+    re_version = ~r/^"([^"]+)"; ?v="([^"]+)"(?:, )?/
+
     version_list
     |> String.split(",")
     |> Enum.map(&String.trim/1)
-    |> Enum.map(&Regex.run(@regex_version, &1, capture: :all_but_first))
+    |> Enum.map(&Regex.run(re_version, &1, capture: :all_but_first))
     |> Enum.reject(&is_nil/1)
     |> Enum.map(fn [brand, version] -> {brand, version} end)
   end

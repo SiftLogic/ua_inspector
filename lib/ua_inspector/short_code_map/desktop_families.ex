@@ -6,7 +6,7 @@ defmodule UAInspector.ShortCodeMap.DesktopFamilies do
   require Logger
 
   alias UAInspector.Config
-  alias UAInspector.Util.YAML
+  alias UAInspector.Util
 
   @behaviour UAInspector.Storage.ShortCodeMap
 
@@ -32,7 +32,7 @@ defmodule UAInspector.ShortCodeMap.DesktopFamilies do
     map = Path.join(Config.database_path(), local)
 
     map
-    |> YAML.read_file()
+    |> Util.YAML.read_file()
     |> parse_yaml_entries(map)
   end
 
@@ -40,7 +40,7 @@ defmodule UAInspector.ShortCodeMap.DesktopFamilies do
 
   defp parse_yaml_entries({:error, error}, map) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load short code map #{map}: #{inspect(error)}")
       end
 

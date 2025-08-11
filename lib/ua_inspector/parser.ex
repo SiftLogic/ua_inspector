@@ -18,20 +18,29 @@ defmodule UAInspector.Parser do
   ]
   @devices_non_mobile ["console", "smart display", "tv"]
 
-  @has_touch Util.build_regex("Touch")
-  @is_android_tv Util.build_regex("Andr0id|Android TV|\\(lite\\) TV")
-  @is_chrome Util.build_regex("Chrome/[\.0-9]*")
-  @is_chrome_smartphone Util.build_regex("(?:Mobile|eliboM) Safari/")
-  @is_chrome_tablet Util.build_regex("(?!Mobile )Safari/")
-  @is_generic_tv Util.build_regex("\\(TV;")
-  @is_misc_tv Util.build_regex("SmartTV|Tizen.+ TV .+$")
-  @is_opera_tv_store Util.build_regex("Opera TV Store| OMI/")
-  @is_desktop Util.build_regex("Desktop (x(?:32|64)|WOW64)")
-  @is_tablet Util.build_regex("Pad/APad")
+  @apple_os_names [
+    "iOS",
+    "iPadOS",
+    "Mac",
+    "tvOS",
+    "watchOS"
+  ]
 
-  @android_mobile Util.build_regex("Android( [\.0-9]+)?; Mobile;")
-  @android_tablet Util.build_regex("Android( [\.0-9]+)?; Tablet;")
-  @opera_tablet Util.build_regex("Opera Tablet")
+  @tv_browser_names [
+    "Crow Browser",
+    "Espial TV Browser",
+    "Kylo",
+    "LUJO TV Browser",
+    "LogicUI TV Browser",
+    "Open TV Browser",
+    "Opera Devices",
+    "QJY TV Browser",
+    "Quick Search TV",
+    "Seraphic Sraf",
+    "TiviMate",
+    "TV Bro",
+    "Vewd Browser"
+  ]
 
   @doc """
   Checks if a user agent is a known bot.
@@ -135,21 +144,36 @@ defmodule UAInspector.Parser do
     |> detect_browser_family(client_hints)
     |> detect_os_family()
     |> maybe_detect_opera_tv_store()
+    |> maybe_detect_coolita_tv()
     |> maybe_detect_android_tv()
     |> maybe_detect_tv()
-    |> maybe_undetect_android_apple()
-    |> maybe_fix_ios()
+    |> maybe_undetect_apple()
+    |> maybe_fix_apple()
+    |> maybe_detect_android_vr()
     |> maybe_fix_android_chrome()
     |> maybe_detect_tablet()
     |> maybe_fix_device_type()
     |> maybe_fix_android()
     |> maybe_detect_feature_phone()
     |> maybe_fix_windows()
+    |> maybe_detect_puffin_browsers()
     |> maybe_fix_misc_tv()
     |> maybe_detect_desktop()
     |> maybe_fix_desktop()
     |> maybe_unknown_device()
   end
+
+  defp detect_browser_family(
+         %{client: %{name: "Wolvic", engine: "Blink", type: "browser"}} = result,
+         _
+       ),
+       do: %{result | browser_family: "Chrome"}
+
+  defp detect_browser_family(
+         %{client: %{name: "Wolvic", engine: "Gecko", type: "browser"}} = result,
+         _
+       ),
+       do: %{result | browser_family: "Firefox"}
 
   defp detect_browser_family(%{client: %{name: client_name, type: "browser"}} = result, %{
          application: app
@@ -180,13 +204,33 @@ defmodule UAInspector.Parser do
   defp detect_os_family(result), do: result
 
   # assume "Andr0id" to be a tv
+  defp maybe_detect_android_tv(%{device: %{type: "peripheral"}} = result), do: result
+  defp maybe_detect_android_tv(%{device: %{type: "tv"}} = result), do: result
+
   defp maybe_detect_android_tv(%{device: device, user_agent: ua} = result) do
-    if Regex.match?(@is_android_tv, ua) do
+    re_is_android_tv =
+      Util.Regex.build_base_regex(
+        "Andr0id|(?:Android(?: UHD)?|Google) TV|\\(lite\\) TV|BRAVIA|Firebolt| TV$"
+      )
+
+    if Regex.match?(re_is_android_tv, ua) do
       %{result | device: %{device | type: "tv"}}
     else
       result
     end
   end
+
+  defp maybe_detect_android_vr(%{device: %{type: :unknown} = device, user_agent: ua} = result) do
+    re_is_android_vr = Util.Regex.build_base_regex("Android( [.0-9]+)?; Mobile VR;| VR")
+
+    if Regex.match?(re_is_android_vr, ua) do
+      %{result | device: %{device | type: "wearable"}}
+    else
+      result
+    end
+  end
+
+  defp maybe_detect_android_vr(result), do: result
 
   defp maybe_detect_desktop(
          %{client: client, device: %{type: :unknown} = device, os: %{name: os_name}} = result
@@ -201,9 +245,18 @@ defmodule UAInspector.Parser do
 
   defp maybe_detect_desktop(result), do: result
 
+  # assume "Coolita OS" to be a tv
+  defp maybe_detect_coolita_tv(%{device: device, os: %{name: "Coolita OS"}} = result) do
+    %{result | device: %{device | brand: "coocaa", type: "tv"}}
+  end
+
+  defp maybe_detect_coolita_tv(result), do: result
+
   # assume "Opera TV Store" to be a tv
   defp maybe_detect_opera_tv_store(%{device: device, user_agent: ua} = result) do
-    if Regex.match?(@is_opera_tv_store, ua) do
+    re_is_opera_tv_store = Util.Regex.build_base_regex("Opera TV Store| OMI/")
+
+    if Regex.match?(re_is_opera_tv_store, ua) do
       %{result | device: %{device | type: "tv"}}
     else
       result
@@ -217,10 +270,40 @@ defmodule UAInspector.Parser do
     %{result | device: %{device | type: "feature phone"}}
   end
 
+  defp maybe_detect_feature_phone(%{device: device, os: %{name: "KaiOS"}} = result) do
+    %{result | device: %{device | type: "feature phone"}}
+  end
+
   defp maybe_detect_feature_phone(result), do: result
 
+  defp maybe_detect_puffin_browsers(
+         %{device: %{type: :unknown} = device, user_agent: ua} = result
+       ) do
+    re_is_puffin_desktop = Util.Regex.build_base_regex("Puffin/(?:\\d+[.\\d]+)[LMW]D")
+    re_is_puffin_smartphone = Util.Regex.build_base_regex("Puffin/(?:\\d+[.\\d]+)[AIFLW]P")
+    re_is_puffin_tablet = Util.Regex.build_base_regex("Puffin/(?:\\d+[.\\d]+)[AILW]T")
+
+    cond do
+      Regex.match?(re_is_puffin_desktop, ua) ->
+        %{result | device: %{device | type: "desktop"}}
+
+      Regex.match?(re_is_puffin_smartphone, ua) ->
+        %{result | device: %{device | type: "smartphone"}}
+
+      Regex.match?(re_is_puffin_tablet, ua) ->
+        %{result | device: %{device | type: "tablet"}}
+
+      true ->
+        result
+    end
+  end
+
+  defp maybe_detect_puffin_browsers(result), do: result
+
   defp maybe_detect_tablet(%{device: %{type: "smartphone"} = device, user_agent: ua} = result) do
-    if Regex.match?(@is_tablet, ua) do
+    re_is_tablet = Util.Regex.build_base_regex("Pad/APad")
+
+    if Regex.match?(re_is_tablet, ua) do
       %{result | device: %{device | type: "tablet"}}
     else
       result
@@ -230,20 +313,16 @@ defmodule UAInspector.Parser do
   defp maybe_detect_tablet(result), do: result
 
   # assume some browsers to be a tv
-  defp maybe_detect_tv(%{client: %{name: "Kylo"}, device: %{type: :unknown} = device} = result) do
-    %{result | device: %{device | type: "tv"}}
-  end
-
   defp maybe_detect_tv(
-         %{client: %{name: "Espial TV Browser"}, device: %{type: :unknown} = device} = result
-       ) do
-    %{result | device: %{device | type: "tv"}}
-  end
+         %{client: %{name: browser_name}, device: %{type: :unknown} = device} = result
+       )
+       when browser_name in @tv_browser_names,
+       do: %{result | device: %{device | type: "tv"}}
 
   defp maybe_detect_tv(result), do: result
 
-  # Android <  2.0.0 is always a smartphone
-  # Android == 3.*   is always a tablet
+  # Android <  2.0 is always a smartphone
+  # Android == 3.* is always a tablet
   # treat Android feature phones as smartphones
   defp maybe_fix_android(%{os: %{version: :unknown}} = result), do: result
 
@@ -257,21 +336,28 @@ defmodule UAInspector.Parser do
          %{device: %{type: :unknown} = device, os: %{name: "Android", version: os_version}} =
            result
        ) do
-    version = Util.to_semver(os_version)
-
     cond do
-      smartphone_android?(version) -> %{result | device: %{device | type: "smartphone"}}
-      tablet_android?(version) -> %{result | device: %{device | type: "tablet"}}
+      smartphone_android?(os_version) -> %{result | device: %{device | type: "smartphone"}}
+      tablet_android?(os_version) -> %{result | device: %{device | type: "tablet"}}
       true -> result
     end
   end
 
   defp maybe_fix_android(result), do: result
 
+  defp maybe_fix_apple(%{device: %{brand: :unknown} = device, os: %{name: os_name}} = result)
+       when is_binary(os_name) and os_name in @apple_os_names do
+    %{result | device: %{device | brand: "Apple"}}
+  end
+
+  defp maybe_fix_apple(result), do: result
+
   defp maybe_fix_desktop(%{device: %{type: "desktop"}} = result), do: result
 
   defp maybe_fix_desktop(%{device: device, user_agent: ua} = result) do
-    if Regex.match?(@is_desktop, ua) do
+    re_is_desktop = Util.Regex.build_regex("Desktop(?: (x(?:32|64)|WOW64))?;")
+
+    if Regex.match?(re_is_desktop, ua) do
       %{result | device: %{device | type: "desktop"}}
     else
       result
@@ -279,41 +365,29 @@ defmodule UAInspector.Parser do
   end
 
   defp maybe_fix_device_type(%{device: %{type: :unknown} = device, user_agent: ua} = result) do
+    re_android_mobile = Util.Regex.build_base_regex("Android( [.0-9]+)?; Mobile;|.*\-mobile$")
+
+    re_android_tablet =
+      Util.Regex.build_base_regex("Android( [.0-9]+)?; Tablet;|Tablet(?! PC)|.*\-tablet$")
+
+    re_opera_tablet = Util.Regex.build_base_regex("Opera Tablet")
+
     cond do
-      Regex.match?(@android_mobile, ua) -> %{result | device: %{device | type: "smartphone"}}
-      Regex.match?(@android_tablet, ua) -> %{result | device: %{device | type: "tablet"}}
-      Regex.match?(@opera_tablet, ua) -> %{result | device: %{device | type: "tablet"}}
+      Regex.match?(re_android_mobile, ua) -> %{result | device: %{device | type: "smartphone"}}
+      Regex.match?(re_android_tablet, ua) -> %{result | device: %{device | type: "tablet"}}
+      Regex.match?(re_opera_tablet, ua) -> %{result | device: %{device | type: "tablet"}}
       true -> result
     end
   end
 
   defp maybe_fix_device_type(result), do: result
 
-  defp maybe_fix_ios(%{device: %{brand: :unknown} = device, os: %{name: "tvOS"}} = result) do
-    %{result | device: %{device | brand: "Apple"}}
-  end
+  defp smartphone_android?(version), do: :lt == Util.Version.compare(version, "2.0")
 
-  defp maybe_fix_ios(%{device: %{brand: :unknown} = device, os: %{name: "iOS"}} = result) do
-    %{result | device: %{device | brand: "Apple"}}
-  end
-
-  defp maybe_fix_ios(%{device: %{brand: :unknown} = device, os: %{name: "Mac"}} = result) do
-    %{result | device: %{device | brand: "Apple"}}
-  end
-
-  defp maybe_fix_ios(%{device: %{brand: :unknown} = device, os: %{name: "watchOS"}} = result) do
-    %{result | device: %{device | brand: "Apple"}}
-  end
-
-  defp maybe_fix_ios(result), do: result
-
-  defp smartphone_android?(version) do
-    :lt == Version.compare(version, "2.0.0")
-  end
-
-  defp tablet_android?(version) do
-    :lt != Version.compare(version, "3.0.0") && :lt == Version.compare(version, "4.0.0")
-  end
+  defp tablet_android?(version),
+    do:
+      :lt != Util.Version.compare(version, "3.0") &&
+        :lt == Util.Version.compare(version, "4.0")
 
   defp maybe_fix_android_chrome(
          %{
@@ -322,12 +396,14 @@ defmodule UAInspector.Parser do
            user_agent: ua
          } = result
        ) do
-    is_chrome = Regex.match?(@is_chrome, ua)
+    re_is_chrome = Util.Regex.build_base_regex("Chrome/[.0-9]*")
+    re_is_chrome_smartphone = Util.Regex.build_base_regex("(?:Mobile|eliboM)")
+    is_chrome = Regex.match?(re_is_chrome, ua)
 
     device_type =
       cond do
-        is_chrome and Regex.match?(@is_chrome_smartphone, ua) -> "smartphone"
-        is_chrome and Regex.match?(@is_chrome_tablet, ua) -> "tablet"
+        is_chrome and Regex.match?(re_is_chrome_smartphone, ua) -> "smartphone"
+        is_chrome -> "tablet"
         true -> :unknown
       end
 
@@ -337,9 +413,12 @@ defmodule UAInspector.Parser do
   defp maybe_fix_android_chrome(result), do: result
 
   defp maybe_fix_misc_tv(%{device: %{type: :unknown} = device, user_agent: ua} = result) do
+    re_is_generic_tv = Util.Regex.build_base_regex("\\(TV;")
+    re_is_misc_tv = Util.Regex.build_base_regex("SmartTV|Tizen.+ TV .+$")
+
     cond do
-      Regex.match?(@is_misc_tv, ua) -> %{result | device: %{device | type: "tv"}}
-      Regex.match?(@is_generic_tv, ua) -> %{result | device: %{device | type: "tv"}}
+      Regex.match?(re_is_misc_tv, ua) -> %{result | device: %{device | type: "tv"}}
+      Regex.match?(re_is_generic_tv, ua) -> %{result | device: %{device | type: "tv"}}
       true -> result
     end
   end
@@ -361,9 +440,10 @@ defmodule UAInspector.Parser do
          } = result
        )
        when is_binary(os_version) do
-    with version <- Util.to_semver(os_version),
-         true <- :lt != Version.compare(version, "8.0.0"),
-         true <- Regex.match?(@has_touch, ua) do
+    re_has_touch = Util.Regex.build_base_regex("Touch")
+
+    with true <- :lt != Util.Version.compare(os_version, "8"),
+         true <- Regex.match?(re_has_touch, ua) do
       %{result | device: %{device | type: "tablet"}}
     else
       _ -> result
@@ -372,13 +452,12 @@ defmodule UAInspector.Parser do
 
   defp maybe_fix_windows(result), do: result
 
-  defp maybe_undetect_android_apple(
-         %{device: %{brand: "Apple"} = device, os: %{name: "Android"}} = result
-       ) do
-    %{result | device: %{device | brand: :unknown, model: :unknown}}
+  defp maybe_undetect_apple(%{device: %{brand: "Apple"}, os: %{name: os_name}} = result)
+       when is_binary(os_name) and os_name not in @apple_os_names do
+    %{result | device: %Result.Device{}}
   end
 
-  defp maybe_undetect_android_apple(result), do: result
+  defp maybe_undetect_apple(result), do: result
 
   defp maybe_unknown_device(
          %{device: %{type: :unknown, brand: :unknown, model: :unknown}} = result

@@ -93,7 +93,7 @@ defmodule UAInspector.ParserTest do
 
     refute UAInspector.mobile?("generic crawler agent")
 
-    refute UAInspector.mobile?(
+    assert UAInspector.mobile?(
              "Mozilla/5.0 (X11; U; Linux x86_64; fa-ir) AppleWebKit/534.35 (KHTML, like Gecko)  Chrome/11.0.696.65 Safari/534.35 Puffin/2.10977AP"
            )
 
@@ -139,6 +139,30 @@ defmodule UAInspector.ParserTest do
     assert ^parsed = UAInspector.parse(agent)
   end
 
+  test "parse form factor header" do
+    header_type_map = [
+      {~s("EInk", "Watch"), "wearable"},
+      {~s("EInk"), "tablet"},
+      {~s("Desktop", "Mobile"), "smartphone"},
+      {~s("Unknown Type", "Mobile"), "smartphone"},
+      {~s("Tablet", "Mobile"), "smartphone"},
+      {~s("EInk", "Tablet"), "tablet"},
+      {~s("Tablet", "Automotive"), "car browser"},
+      {~s("EInk", "Xr"), "wearable"}
+    ]
+
+    for {form_factors_header, device_type} <- header_type_map do
+      client_hints =
+        ClientHints.new([
+          {"sec-ch-ua-form-factors", form_factors_header},
+          {"sec-ch-ua-model", ~s("Some Unknown Model")}
+        ])
+
+      assert %{device: %{brand: :unknown, model: "Some Unknown Model", type: ^device_type}} =
+               UAInspector.parse("Some Unknown UA", client_hints)
+    end
+  end
+
   test "parse unknown" do
     agent = "some unknown user agent"
     parsed = %Result{user_agent: agent}
@@ -161,8 +185,8 @@ defmodule UAInspector.ParserTest do
       parsed = %Result{
         browser_family: "Chrome",
         client: %Result.Client{
-          engine: "WebKit",
-          engine_version: "537.36",
+          engine: "Blink",
+          engine_version: "83.0.4103.120",
           name: "Chrome",
           type: "browser",
           version: :unknown

@@ -7,7 +7,6 @@ defmodule UAInspector.Database.Bots do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -26,11 +25,11 @@ defmodule UAInspector.Database.Bots do
       data = Enum.into(data, %{})
 
       {
-        Util.build_regex(data["regex"]),
+        Util.Regex.build_regex(data["regex"]),
         {
-          YAML.maybe_to_string(data["category"]) || :unknown,
+          Util.YAML.maybe_to_string(data["category"]) || :unknown,
           data["name"],
-          YAML.maybe_to_string(data["url"]) || :unknown,
+          Util.YAML.maybe_to_string(data["url"]) || :unknown,
           producer_info(data["producer"])
         }
       }
@@ -39,7 +38,7 @@ defmodule UAInspector.Database.Bots do
 
   defp parse_yaml_entries({:error, error}, database) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -51,7 +50,7 @@ defmodule UAInspector.Database.Bots do
   defp producer_info(info) do
     info = Enum.into(info, %{})
 
-    {info["name"], info["url"]}
+    {info["name"], info["url"] || :unknown}
   end
 
   defp read_database do
@@ -62,7 +61,7 @@ defmodule UAInspector.Database.Bots do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database)
 
       [contents | acc]

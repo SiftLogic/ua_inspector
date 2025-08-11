@@ -7,7 +7,6 @@ defmodule UAInspector.Database.VendorFragments do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -26,13 +25,13 @@ defmodule UAInspector.Database.VendorFragments do
 
   defp parse_yaml_entries({:ok, entries}, _) do
     Enum.map(entries, fn {brand, regexes} ->
-      Enum.map(regexes, &{Util.build_regex(&1), brand})
+      Enum.map(regexes, &{Util.Regex.build_regex(&1), brand})
     end)
   end
 
   defp parse_yaml_entries({:error, error}, database) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -47,7 +46,7 @@ defmodule UAInspector.Database.VendorFragments do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database)
 
       [contents | acc]

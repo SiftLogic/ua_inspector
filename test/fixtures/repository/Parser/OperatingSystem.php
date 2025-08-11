@@ -22,4 +22,12 @@ class OperatingSystem
         'GNU/Linux' => ['Linux'],
         'Mac'       => ['MacOS'],
     ];
+
+    private $fireOsVersionMapping = [
+        '11' => '8',
+    ];
+
+    private $lineageOsVersionMapping = [
+        '12' => '19.0',
+    ];
 }

@@ -6,7 +6,7 @@ defmodule UAInspector.ClientHints.Browsers do
   require Logger
 
   alias UAInspector.Config
-  alias UAInspector.Util.YAML
+  alias UAInspector.Util
 
   @behaviour UAInspector.Storage.ClientHints
 
@@ -25,7 +25,7 @@ defmodule UAInspector.ClientHints.Browsers do
 
   defp parse_yaml_entries({:error, error}, database) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load client hints #{database}: #{inspect(error)}")
       end
 
@@ -37,7 +37,7 @@ defmodule UAInspector.ClientHints.Browsers do
     database = Path.join([Config.database_path(), local])
 
     database
-    |> YAML.read_file()
+    |> Util.YAML.read_file()
     |> parse_yaml_entries(database)
   end
 end

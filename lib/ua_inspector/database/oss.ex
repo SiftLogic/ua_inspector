@@ -7,7 +7,6 @@ defmodule UAInspector.Database.OSs do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -26,7 +25,7 @@ defmodule UAInspector.Database.OSs do
       data = Enum.into(data, %{})
 
       {
-        Util.build_regex(data["regex"]),
+        Util.Regex.build_regex(data["regex"]),
         data["version"]
       }
     end)
@@ -37,10 +36,10 @@ defmodule UAInspector.Database.OSs do
       data = Enum.into(data, %{})
 
       {
-        Util.build_regex(data["regex"]),
+        Util.Regex.build_regex(data["regex"]),
         {
-          YAML.maybe_to_string(data["name"]),
-          YAML.maybe_to_string(data["version"]),
+          Util.YAML.maybe_to_string(data["name"]),
+          Util.YAML.maybe_to_string(data["version"]),
           oss_versions(data["versions"] || [])
         }
       }
@@ -49,7 +48,7 @@ defmodule UAInspector.Database.OSs do
 
   defp parse_yaml_entries({:error, error}, database) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -64,7 +63,7 @@ defmodule UAInspector.Database.OSs do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database)
 
       [contents | acc]

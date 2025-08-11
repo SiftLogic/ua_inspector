@@ -14,6 +14,7 @@ defmodule UAInspector.Downloader.ShortCodeMapConverter do
     "\\$#{var} = (?:array\\(|\\[)(?<map>.*)(?:\\)|\\]);"
     |> Regex.compile!(re_opts)
     |> Regex.named_captures(source)
+    |> Kernel.||(%{})
     |> Map.get("map", "")
     |> parse_source(type)
   end
@@ -42,8 +43,10 @@ defmodule UAInspector.Downloader.ShortCodeMapConverter do
         for {entry, elements} <- map do
           elements_content = Enum.map(elements, &[~s(  - "), &1, ~s("\n)])
 
-          IO.write(outfile, [~s(- "), entry, ~s(":\n)])
-          IO.write(outfile, elements_content)
+          IO.write(
+            outfile,
+            [~s(- "), entry, ~s(":\n), elements_content]
+          )
         end
       end)
 
@@ -78,23 +81,20 @@ defmodule UAInspector.Downloader.ShortCodeMapConverter do
   end
 
   defp parse_mapping(mapping, :hash) do
-    "'(.+)' => '(.+)'"
-    |> Regex.compile!()
+    ~r/'(.+)' +=> +'(.+)'/
     |> Regex.run(mapping)
     |> mapping_to_entry()
   end
 
   defp parse_mapping(mapping, :hash_with_list) do
-    "'(.+)' +=> (?:array\\(|\\[)(.+)(?:\\)|\\]|$)"
-    |> Regex.compile!([:dotall, :ungreedy])
+    ~r/'(.+)' +=> +(?:array\(|\[)(.+)(?:\)|\]|$)/sU
     |> Regex.run(mapping)
     |> mapping_to_entry()
     |> mapping_to_entry_list()
   end
 
   defp parse_mapping(mapping, :list) do
-    "'(.+)'"
-    |> Regex.compile!([:ungreedy])
+    ~r/'(.+)'/U
     |> Regex.run(mapping)
     |> mapping_to_entry()
   end

@@ -11,24 +11,21 @@ defmodule UAInspector.Parser.Device do
 
   @behaviour UAInspector.Parser.Behaviour
 
-  @hbbtv Util.build_regex("HbbTV/([1-9]{1}(?:\.[0-9]{1}){1,2})")
-  @notebook Util.build_regex("FBMD/")
-  @shelltv Util.build_regex("[a-z]+[ _]Shell[ _]\\w{6}|tclwebkit(\\d+[\.\\d]*)")
+  @form_factors_type_map [
+    {"automotive", "car browser"},
+    {"xr", "wearable"},
+    {"watch", "wearable"},
+    {"mobile", "smartphone"},
+    {"tablet", "tablet"},
+    {"desktop", "desktop"},
+    {"eink", "tablet"}
+  ]
 
   @impl UAInspector.Parser.Behaviour
   def parse(ua, client_hints) do
-    agent_result =
-      cond do
-        Regex.match?(@hbbtv, ua) -> parse_hbbtv(ua)
-        Regex.match?(@shelltv, ua) -> parse_shelltv(ua)
-        Regex.match?(@notebook, ua) -> parse_notebook(ua)
-        true -> parse_regular(ua)
-      end
-      |> maybe_parse_vendor(ua, client_hints)
-
-    hints_result = parse_hints(client_hints)
-
-    merge_results(hints_result, agent_result)
+    client_hints
+    |> parse_hints()
+    |> parse_device(client_hints, ua)
   end
 
   @doc """
@@ -36,7 +33,7 @@ defmodule UAInspector.Parser.Device do
   """
   @spec parse_hbbtv_version(String.t()) :: nil | String.t()
   def parse_hbbtv_version(ua) do
-    case Regex.run(@hbbtv, ua, capture: :all_but_first) do
+    case Regex.run(re_hbbtv(), ua, capture: :all_but_first) do
       nil -> nil
       [version | _] -> version
     end
@@ -46,7 +43,43 @@ defmodule UAInspector.Parser.Device do
   Checks if a devices contains a ShellTV part.
   """
   @spec shelltv?(String.t()) :: boolean
-  def shelltv?(ua), do: Regex.match?(@shelltv, ua)
+  def shelltv?(ua), do: Regex.match?(re_shelltv(), ua)
+
+  defp parse_device(%{model: :unknown} = hints_result, client_hints, ua) do
+    if Util.UserAgent.has_desktop_fragment?(ua) or Util.UserAgent.has_client_hints_fragment?(ua) do
+      hints_result
+    else
+      parse_device_details(hints_result, client_hints, ua)
+    end
+  end
+
+  defp parse_device(hints_result, client_hints, ua) do
+    ua = Util.UserAgent.restore_from_client_hints(ua, client_hints)
+
+    parse_device_details(hints_result, client_hints, ua)
+  end
+
+  defp parse_device_details(hints_result, client_hints, ua) do
+    agent_result =
+      cond do
+        Regex.match?(re_hbbtv(), ua) -> parse_hbbtv(ua)
+        Regex.match?(re_shelltv(), ua) -> parse_shelltv(ua)
+        Regex.match?(re_notebook(), ua) -> parse_notebook(ua)
+        true -> parse_regular(ua)
+      end
+      |> maybe_parse_vendor(ua, client_hints)
+
+    merge_results(hints_result, agent_result)
+  end
+
+  defp merge_results(%{} = hints_result, %{} = agent_result) do
+    Map.merge(hints_result, agent_result, fn
+      _, hints_value, :unknown -> hints_value
+      _, _, agent_value -> agent_value
+    end)
+  end
+
+  defp merge_results(_, agent_result), do: agent_result
 
   defp do_parse(_, []), do: :unknown
 
@@ -64,19 +97,32 @@ defmodule UAInspector.Parser.Device do
 
   defp maybe_parse_vendor(device, _, _), do: device
 
-  defp merge_results(%{} = hints_result, %{brand: :unknown, model: :unknown, type: :unknown}),
-    do: hints_result
+  defp parse_hints(%{form_factors: form_factors, model: model})
+       when is_binary(model) or 0 < length(form_factors) do
+    device_model = Util.maybe_unknown(model)
+    device_type = parse_hints_form_factors(@form_factors_type_map, form_factors)
 
-  defp merge_results(_, agent_result), do: agent_result
-
-  defp parse_hints(%{model: model}) when is_binary(model),
-    do: %Result.Device{model: Util.maybe_unknown(model)}
+    %Result.Device{type: device_type, model: device_model}
+  end
 
   defp parse_hints(_), do: :unknown
+
+  defp parse_hints_form_factors(_, []), do: :unknown
+
+  defp parse_hints_form_factors([{factor, device_type} | form_factors_type_map], form_factors) do
+    if Enum.member?(form_factors, factor) do
+      device_type
+    else
+      parse_hints_form_factors(form_factors_type_map, form_factors)
+    end
+  end
+
+  defp parse_hints_form_factors([], _), do: :unknown
 
   defp parse_hbbtv(ua) do
     case do_parse(ua, DevicesHbbTV.list()) do
       :unknown -> %Result.Device{type: "tv"}
+      %{type: :unknown} = device -> %{device | type: "tv"}
       device -> device
     end
   end
@@ -84,7 +130,7 @@ defmodule UAInspector.Parser.Device do
   defp parse_shelltv(ua) do
     case do_parse(ua, DevicesShellTV.list()) do
       :unknown -> %Result.Device{type: "tv"}
-      device -> device
+      device -> %{device | type: "tv"}
     end
   end
 
@@ -118,7 +164,7 @@ defmodule UAInspector.Parser.Device do
 
   defp parse_model_data({device_brand, _, device, _}, {brand, model_device, model}, captures) do
     result_model =
-      case Util.uncapture(model, captures) do
+      case Util.Regex.uncapture(model, captures) do
         "" ->
           :unknown
 
@@ -140,4 +186,8 @@ defmodule UAInspector.Parser.Device do
       model: result_model
     }
   end
+
+  defp re_hbbtv, do: Util.Regex.build_regex("(?:HbbTV|SmartTvA)/([1-9]{1}(?:\.[0-9]{1}){1,2})")
+  defp re_shelltv, do: Util.Regex.build_regex("[a-z]+[ _]Shell[ _]\\w{6}|tclwebkit(\\d+[.\\d]*)")
+  defp re_notebook, do: Util.Regex.build_regex("FBMD/")
 end

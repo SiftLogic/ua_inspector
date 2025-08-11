@@ -7,7 +7,6 @@ defmodule UAInspector.Database.BrowserEngines do
 
   alias UAInspector.Config
   alias UAInspector.Util
-  alias UAInspector.Util.YAML
 
   @behaviour UAInspector.Storage.Database
 
@@ -28,13 +27,14 @@ defmodule UAInspector.Database.BrowserEngines do
     Enum.map(entries, fn data ->
       data = Enum.into(data, %{})
 
-      {Util.build_regex(data["regex"]), {data["name"], Util.build_engine_regex(data["name"])}}
+      {Util.Regex.build_regex(data["regex"]),
+       {data["name"], Util.Regex.build_engine_regex(data["name"])}}
     end)
   end
 
   defp parse_yaml_entries({:error, error}, database) do
     _ =
-      unless Config.get(:startup_silent) do
+      if !Config.get(:startup_silent) do
         Logger.info("Failed to load database #{database}: #{inspect(error)}")
       end
 
@@ -49,7 +49,7 @@ defmodule UAInspector.Database.BrowserEngines do
 
       contents =
         database
-        |> YAML.read_file()
+        |> Util.YAML.read_file()
         |> parse_yaml_entries(database)
 
       [contents | acc]
