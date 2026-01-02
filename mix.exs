@@ -3,28 +3,20 @@ defmodule UAInspector.MixProject do
 
   @url_changelog "https://hexdocs.pm/ua_inspector/changelog.html"
   @url_github "https://github.com/elixir-inspector/ua_inspector"
-  @version "3.11.0-dev"
+  @version "4.0.0-dev"
 
   def project do
     [
       app: :ua_inspector,
       name: "UAInspector",
       version: @version,
-      elixir: "~> 1.9",
+      elixir: "~> 1.17",
       aliases: aliases(),
       deps: deps(),
       description: "User agent parser library",
       dialyzer: dialyzer(),
       docs: docs(),
       package: package(),
-      preferred_cli_env: [
-        "bench.parse": :bench,
-        "bench.parse_client": :bench,
-        "bench.parse_device": :bench,
-        "bench.parse_os": :bench,
-        coveralls: :test,
-        "coveralls.detail": :test
-      ],
       test_coverage: [tool: ExCoveralls]
     ]
   end
@@ -33,6 +25,19 @@ defmodule UAInspector.MixProject do
     [
       extra_applications: extra_applications(Mix.env()) ++ [:logger],
       mod: {UAInspector.Application, []}
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        "bench.parse": :bench,
+        "bench.parse_client": :bench,
+        "bench.parse_device": :bench,
+        "bench.parse_os": :bench,
+        coveralls: :test,
+        "coveralls.detail": :test
+      ]
     ]
   end
 
@@ -47,11 +52,11 @@ defmodule UAInspector.MixProject do
 
   defp deps do
     [
-      {:benchee, "~> 1.3", only: :bench, runtime: false},
+      {:benchee, "~> 1.4", only: :bench, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.16.0", only: :test, runtime: false},
+      {:excoveralls, "~> 0.18.0", only: :test, runtime: false},
       {:hackney, "~> 1.0"},
       {:yamerl, "~> 0.7"}
     ]

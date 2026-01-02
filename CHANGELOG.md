@@ -1,10 +1,24 @@
 # Changelog
 
-## v3.11.0-dev
+## v4.0.0-dev
+
+- Backwards incompatible changes
+    - Minimum required Elixir version is now `~> 1.17`
+
+## v3.12.0-dev
+
+- Enhancements
+    - Default upstream database version is now `6.4.8`
+    - Upstream improvements for detections have been integrated
+
+- Bug fixes
+    - Fixed accidental parsing of deprecated (commented) short codes
+
+## v3.11.0 (2025-08-26)
 
 - Enhancements
     - Added support to use "form factors" client hint header for improved detection
-    - Default upstream database version is now `6.4.6`
+    - Default upstream database version is now `6.4.7`
     - Improved mobile app detection
     - Upstream improvements for OS platform detection have been integrated
     - Upstream improvements for Blink engine detection have been integrated
