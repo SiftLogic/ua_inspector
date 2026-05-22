@@ -282,7 +282,7 @@ defmodule UAInspector do
       Enum.each(@storage_modules, &GenServer.cast(&1, :reload))
     else
       @storage_modules
-      |> Task.async_stream(&GenServer.call(&1, :reload), ordered: false)
+      |> Task.async_stream(&GenServer.call(&1, :reload, 15_000), ordered: false)
       |> Stream.run()
     end
   end
